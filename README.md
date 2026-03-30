@@ -1,5 +1,9 @@
 # @veroq/sdk
 
+[![npm](https://img.shields.io/npm/v/@veroq/sdk?color=2EE89A&label=npm)](https://www.npmjs.com/package/@veroq/sdk)
+[![Downloads](https://img.shields.io/npm/dm/@veroq/sdk?color=2EE89A)](https://www.npmjs.com/package/@veroq/sdk)
+[![License](https://img.shields.io/badge/license-MIT-2EE89A)](LICENSE)
+
 Official TypeScript SDK for [VEROQ](https://veroq.ai) — verified intelligence for AI agents.
 
 > **Migrating from `polaris-news-api`?** This is the same SDK, rebranded. Drop-in replacement — just change your import.
