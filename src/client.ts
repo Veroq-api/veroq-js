@@ -227,6 +227,8 @@ function parseSourceAnalysis(raw: Record<string, unknown>): SourceAnalysis {
 export class VeroqClient {
   private apiKey: string | undefined;
   private baseUrl: string;
+  private enterpriseConfig: Record<string, unknown> = {};
+  private auditLog: Record<string, unknown>[] = [];
 
   constructor(options: VeroqClientOptions = {}) {
     this.apiKey = options.apiKey ?? readCredentials();
@@ -965,6 +967,51 @@ export class VeroqClient {
   async uploadReport(ticker: string, markdown: string, tier?: string): Promise<any> {
     const body: Record<string, unknown> = { ticker, markdown, tier: tier || "cli" };
     return this.request<any>("POST", "/api/v1/reports/upload", undefined, body);
+  }
+
+  // -- Enterprise --
+
+  /** Configure enterprise settings for decision lineage and escalation. */
+  configureEnterprise(config: {
+    enterpriseId: string;
+    escalationThreshold?: number;
+    escalationTools?: string[];
+    escalationPauses?: boolean;
+    sessionId?: string;
+    deniedTools?: string[];
+    reviewTools?: string[];
+    highStakesThreshold?: number;
+  }): void {
+    this.enterpriseConfig = config;
+  }
+
+  /** Get decision lineage for a tool call — audit trail for enterprise governance. */
+  getDecisionLineage(toolName: string, input: Record<string, unknown>, output?: Record<string, unknown>): Record<string, unknown> {
+    const config = this.enterpriseConfig || {};
+    const threshold = (config.escalationThreshold as number) || 80;
+    const question = String(input.question || input.claim || '');
+    const highStakes = /\bshould\s+(i|we)\s+(buy|sell|trade|invest)\b/i.test(question);
+    const tradeScore = (output?.trade_signal as any)?.score || 0;
+    const escalated = tradeScore > threshold;
+
+    const entry: Record<string, unknown> = {
+      toolName,
+      input,
+      decision: escalated ? 'escalate' : highStakes ? 'review' : 'allow',
+      highStakes,
+      escalated,
+      enterpriseId: config.enterpriseId,
+      timestamp: new Date().toISOString(),
+      sessionId: config.sessionId,
+    };
+
+    this.auditLog.push(entry);
+    return entry;
+  }
+
+  /** Retrieve the audit trail, optionally filtered by session ID. */
+  getAuditTrail(sessionId?: string): Record<string, unknown>[] {
+    return this.auditLog.filter(e => !sessionId || e.sessionId === sessionId);
   }
 
   stream(options: StreamOptions = {}): { start: (onBrief: (brief: Brief) => void, onError?: (error: Error) => void) => void; stop: () => void } {

@@ -1,9 +1,5 @@
 # @veroq/sdk
 
-[![npm](https://img.shields.io/npm/v/@veroq/sdk?color=2EE89A&label=npm)](https://www.npmjs.com/package/@veroq/sdk)
-[![Downloads](https://img.shields.io/npm/dm/@veroq/sdk?color=2EE89A)](https://www.npmjs.com/package/@veroq/sdk)
-[![License](https://img.shields.io/badge/license-MIT-2EE89A)](LICENSE)
-
 Official TypeScript SDK for [VEROQ](https://veroq.ai) — verified intelligence for AI agents.
 
 > **Migrating from `polaris-news-api`?** This is the same SDK, rebranded. Drop-in replacement — just change your import.
@@ -116,6 +112,48 @@ stream.start(
 
 // Later: stream.stop();
 ```
+
+## Enterprise Features
+
+Configure enterprise governance with decision lineage, escalation rules, and audit trails.
+
+```typescript
+import { VeroqClient } from '@veroq/sdk';
+
+const client = new VeroqClient();
+
+// Configure enterprise settings
+client.configureEnterprise({
+  enterpriseId: 'acme-corp',
+  escalationThreshold: 80,        // Trade signals above 80 → escalate
+  escalationPauses: true,          // Pause on escalation
+  sessionId: 'session-abc-123',
+  deniedTools: ['backtest'],       // Block specific tools
+  reviewTools: ['ask', 'verify'],  // Flag tools for review
+});
+
+// Get decision lineage for any tool call
+const answer = await client.ask("Should we buy NVDA?");
+const lineage = client.getDecisionLineage('ask', { question: "Should we buy NVDA?" }, answer);
+console.log(lineage.decision);   // 'review' (high-stakes question detected)
+console.log(lineage.highStakes); // true
+console.log(lineage.escalated);  // depends on trade_signal.score
+
+// Retrieve the full audit trail
+const trail = client.getAuditTrail();
+console.log(`${trail.length} decisions logged`);
+
+// Filter audit trail by session
+const sessionTrail = client.getAuditTrail('session-abc-123');
+```
+
+### Decision Types
+
+| Decision | Trigger | Action |
+|----------|---------|--------|
+| `allow` | Normal query | Proceed automatically |
+| `review` | High-stakes language detected ("should I buy/sell") | Flag for human review |
+| `escalate` | Trade signal score exceeds threshold | Pause and escalate |
 
 ## Backward Compatibility
 
